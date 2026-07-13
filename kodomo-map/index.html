@@ -696,7 +696,7 @@ html,body{margin:0;height:100%;font-family:-apple-system,"Hiragino Sans",sans-se
 </head>
 <body>
 <div id="map"></div>
-<div class="note"><b>こどもマップ β v2</b><br>探索プロト（東京エリア シード13件）</div>
+<div class="note"><b>こどもマップ β v2</b><br>探索プロト（東京都 参考1万件＋✅検証13件）</div>
 <button class="cta" onclick="document.getElementById('m').style.display='flex'">📱 アプリ版 ¥300</button>
 <button class="locbtn" onclick="locate()" title="現在地">📍</button>
 <div class="count" id="cnt"></div>
@@ -715,6 +715,10 @@ html,body{margin:0;height:100%;font-family:-apple-system,"Hiragino Sans",sans-se
  <div class="frow"><span class="flabel">料金</span>
   <button class="chip on" id="c-all" onclick="setFree(false)">すべて</button>
   <button class="chip" id="c-free" onclick="setFree(true)">無料のみ</button>
+ </div>
+ <div class="frow"><span class="flabel">参考</span>
+  <button class="chip on" id="la-park" onclick="tgLA('park',this)">🌳 公園</button>
+  <button class="chip on" id="la-pg" onclick="tgLA('playground',this)">🛝 遊び場</button>
  </div>
 </div>
 <div id="toast"></div>
@@ -762,6 +766,23 @@ function tgCat(c,el){ if(st.cats.has(c)){st.cats.delete(c);el.classList.remove('
 function tgAge(el){const a=el.dataset.age; if(st.ages.has(a)){st.ages.delete(a);el.classList.remove('on')}else{st.ages.add(a);el.classList.add('on')} refresh()}
 function setFree(f){st.freeOnly=f;document.getElementById('c-free').classList.toggle('on',f);document.getElementById('c-all').classList.toggle('on',!f);refresh()}
 refresh();
+const laState={park:true,playground:true};
+const laLayers={park:null,playground:null};
+const laCanvas=L.canvas({padding:0.3});
+fetch('la-tokyo.json').then(r=>r.json()).then(d=>{
+ const mk=(arr,color,label)=>{const g=L.layerGroup();
+  arr.forEach(pt=>{const la=pt[0],lo=pt[1],n=pt[2];
+   const c=L.circleMarker([la,lo],{renderer:laCanvas,radius:4,color:color,weight:1,fillColor:color,fillOpacity:.55});
+   c.bindPopup(`<div class="pop"><b>${n||label}</b><div class="row">出典: OpenStreetMap（取得日 ${d.fetched}）・詳細未検証の参考情報</div><a href="https://www.google.com/maps/search/?api=1&query=${la},${lo}" target="_blank" rel="noopener">Google マップで開く ↗</a></div>`,{maxWidth:240});
+   g.addLayer(c)});
+  return g};
+ laLayers.park=mk(d.park,'#2e7d32','公園');
+ laLayers.playground=mk(d.playground,'#f9a825','遊び場');
+ refreshLA();
+ toast(`参考レイヤー読込: 公園${d.park.length}件・遊び場${d.playground.length}件（東京都・OSM）`,5000);
+}).catch(()=>toast('参考レイヤー（公園・遊び場）は URL 版でのみ表示されます'));
+function refreshLA(){for(const k in laLayers){const l=laLayers[k];if(!l)continue;if(laState[k]){l.addTo(map)}else{map.removeLayer(l)}}}
+function tgLA(k,el){laState[k]=!laState[k];el.classList.toggle('on',laState[k]);refreshLA()}
 let uMark=null,uCirc=null;
 function locate(){
  if(!('geolocation' in navigator)){toast('この環境では現在地を取得できません');return}
